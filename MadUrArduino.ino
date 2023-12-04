@@ -3,6 +3,10 @@
 #include "DS1307.h"
 #include "rgb_lcd.h"
 
+// Global vars for StateMachine
+bool stateLocked = false;
+int currentState = 0;
+
 // Global vars for ButtonEvent
 const int buttonPin = 6;
 bool lastButtonState = false;
@@ -13,8 +17,7 @@ long lastButtonClicktime = millis();
 // Encoder setup
 Encoder myEnc(3, 2);
 int encoderValue = 0;
-int prevEncoderValueCount = 0;
-int encoderValueCount = 0;
+int prevEncoderValue = 0;
 
 // LCD definition and variables
 rgb_lcd lcd;
@@ -42,16 +45,73 @@ void setup()
 
 void loop()
 {
-	encoderValue = myEnc.read();
-	prevEncoderValueCount = encoderValueCount;
-	encoderValueCount = encoderValue / -4;
-
 	// Update buttonClicked
 	ButtonEvent();
+
+	// Run StateMachine to run program functionality
+	StateMachine();
 }
 
+// Helper functions
+String SetZero(uint8_t number)
+{
+	/*
+		This function is for formatting date and time. It decides if there should be an extra 0 in front of a number.
+	*/
+	if (number > 9)
+	{
+		return "";
+	} else {
+		return "0";
+	}
+}
+
+void UpdateEncoderValue()
+{
+	prevEncoderValue = encoderValue;
+	encoderValue = myEnc.read();
+}
+
+// Program stucture functions
+void StateMachine()
+{
+	bool stateUpdated = false;
+	if (stateLocked == false)
+	{
+		UpdateEncoderValue();
+		currentState = abs((encoderValue / -4) % 4);
+		if (abs((prevEncoderValue / -4) % 4) != currentState)
+		{
+			stateUpdated = true;
+		}
+	}
+	// Clear lcd if state has changed
+	if (stateUpdated == true)
+	{
+		lcd.clear();
+	}
+
+	// Choose and run state
+	switch (currentState)
+	{
+		case 0:
+			Clock();
+			break;
+
+		default:
+			// If currentState doesn't exist
+			lcd.setCursor(0, 0);
+			lcd.print("Error! State doesn't exist!");
+			break;
+  	}
+}
+
+// Functionality functions
 void Clock()
 {
+	/*
+		This function will display time and date from RTC on lcd.
+	*/
 	// Get current time from RTC
 	clock.getTime();
 	// Print time on lcd
@@ -75,17 +135,7 @@ void Clock()
 	lcd.print(clock.year+2000);
 }
 
-String SetZero(uint8_t number)
-{
-	if (number > 9)
-	{
-		return "";
-	} else {
-		return "0";
-	}
-}
-
-void ButtonEvent() 
+void ButtonEvent()
 {
 	/*
 	This function updates the global variable buttonClicked.

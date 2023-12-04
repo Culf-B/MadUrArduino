@@ -101,7 +101,9 @@ void StateMachine()
 		default:
 			// If currentState doesn't exist
 			lcd.setCursor(0, 0);
-			lcd.print("Error! State doesn't exist!");
+			lcd.print("Error!");
+			lcd.setCursor(0, 1);
+			lcd.print("Invalid state!");
 			break;
   	}
 }

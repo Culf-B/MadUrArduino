@@ -14,6 +14,11 @@ bool buttonClicked = false;
 const int buttonCooldownMs = 100;
 long lastButtonClicktime = millis();
 
+// Global vars for StopWatch
+bool stopWatchStartet = false;
+long stopWatchStartTime;
+long stopWatchEndTime = 0;
+
 // Encoder setup
 Encoder myEnc(3, 2);
 int encoderValue = 0;
@@ -72,6 +77,27 @@ void UpdateEncoderValue()
 	encoderValue = myEnc.read();
 }
 
+void DisplayTime(int row, long timeInMillis)
+{
+	lcd.setCursor(0, row);
+
+	int displayHours = timeInMillis / 1000 / 60 / 60;
+	int displayMinutes = timeInMillis/ 1000 / 60 - displayHours * 60;
+	int displaySeconds = timeInMillis / 1000 - displayHours * 60 * 60 - displayMinutes * 60;
+	int displayMillis = timeInMillis - displayHours * 60 * 60 * 1000 - displayMinutes * 60 * 1000 - displaySeconds * 1000;
+
+	lcd.print(SetZero(displayHours));
+	lcd.print(displayHours); // Hours
+	lcd.print(":");
+	lcd.print(SetZero(displayMinutes));
+	lcd.print(displayMinutes); // Minutes
+	lcd.print(":");
+	lcd.print(SetZero(displaySeconds));
+	lcd.print(displaySeconds); // Seconds
+	lcd.print(".");
+	lcd.print(displayMillis); // Millis
+}
+
 // Program stucture functions
 void StateMachine()
 {
@@ -97,6 +123,15 @@ void StateMachine()
 		case 0:
 			Clock();
 			break;
+		case 1:
+			StopWatch();
+			break;
+		case 2:
+			GuessTime();
+			break;
+		case 3:
+			EggTimer();
+			break;
 
 		default:
 			// If currentState doesn't exist
@@ -106,35 +141,6 @@ void StateMachine()
 			lcd.print("Invalid state!");
 			break;
   	}
-}
-
-// Functionality functions
-void Clock()
-{
-	/*
-		This function will display time and date from RTC on lcd.
-	*/
-	// Get current time from RTC
-	clock.getTime();
-	// Print time on lcd
-	lcd.setCursor(0, 0);
-	lcd.print(SetZero(clock.hour));
-	lcd.print(clock.hour);
-	lcd.print(":");
-	lcd.print(SetZero(clock.minute));
-	lcd.print(clock.minute);
-	lcd.print(":");
-	lcd.print(SetZero(clock.second));
-	lcd.print(clock.second);
-	// Print date on lcd
-	lcd.setCursor(0, 1);
-	lcd.print(SetZero(clock.dayOfMonth));
-	lcd.print(clock.dayOfMonth);
-	lcd.print("/");
-	lcd.print(SetZero(clock.month));
-	lcd.print(clock.month);
-	lcd.print("/");
-	lcd.print(clock.year+2000);
 }
 
 void ButtonEvent()
@@ -168,4 +174,93 @@ void ButtonEvent()
 		lastButtonState = false;
 		buttonClicked = false;
 	}
+}
+
+// Functionality functions
+void Clock()
+{
+	/*
+		This function will display time and date from RTC on lcd.
+	*/
+	// Get current time from RTC
+	clock.getTime();
+	// Print time on lcd
+	lcd.setCursor(0, 0);
+	lcd.print(SetZero(clock.hour));
+	lcd.print(clock.hour);
+	lcd.print(":");
+	lcd.print(SetZero(clock.minute));
+	lcd.print(clock.minute);
+	lcd.print(":");
+	lcd.print(SetZero(clock.second));
+	lcd.print(clock.second);
+	// Print date on lcd
+	lcd.setCursor(0, 1);
+	lcd.print(SetZero(clock.dayOfMonth));
+	lcd.print(clock.dayOfMonth);
+	lcd.print("/");
+	lcd.print(SetZero(clock.month));
+	lcd.print(clock.month);
+	lcd.print("/");
+	lcd.print(clock.year+2000);
+}
+
+void StopWatch()
+{
+	if (stopWatchStartet == false)
+	{
+		if (stopWatchEndTime != 0)
+		{
+			DisplayTime(0, stopWatchEndTime);
+			lcd.setCursor(0, 1);
+			lcd.print("Tryk for reset");
+			if (buttonClicked)
+			{
+				stopWatchEndTime = 0;
+				stopWatchStartTime = 0;
+				lcd.clear();
+			}
+		} else
+		{
+			lcd.setCursor(0, 0);
+			lcd.print("Stopur");
+			lcd.setCursor(0, 1);
+			lcd.print("Tryk for start");
+			Serial.println(buttonClicked);
+			if (buttonClicked)
+			{
+				stopWatchStartet = true;
+				stopWatchStartTime = millis();
+				stateLocked = true;
+				lcd.clear();
+			}
+		}
+	} else
+	{
+		long nowTime = millis();
+
+		DisplayTime(0, nowTime - stopWatchStartTime);
+
+		lcd.setCursor(0, 1);
+		lcd.print("Tryk for stop");
+		if (buttonClicked)
+		{
+			stopWatchStartet = false;
+			stopWatchEndTime = nowTime - stopWatchStartTime;
+			stateLocked = false;
+			lcd.clear();
+		}
+	}
+}
+
+void GuessTime()
+{
+	lcd.setCursor(0, 0);
+	lcd.print("Gaet tid");
+}
+
+void EggTimer()
+{
+	lcd.setCursor(0, 0);
+	lcd.print("Kog aeg");
 }

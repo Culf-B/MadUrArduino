@@ -19,6 +19,13 @@ bool stopWatchStartet = false;
 long stopWatchStartTime;
 long stopWatchEndTime = 0;
 
+// Global vars for GuessTime
+int timeGuessed = -1;
+bool guessing = false;
+bool guessTimeRunning = false;
+long guessStartTime = 0;
+int correctGuess = 0;
+
 // Encoder setup
 Encoder myEnc(3, 2);
 int encoderValue = 0;
@@ -46,6 +53,9 @@ void setup()
 	// LCD setup
     lcd.begin(16, 2);
     lcd.setRGB(colorR, colorG, colorB);
+
+	// Set random seed by reading the noise from an unconnected analog pin
+	randomSeed(analogRead(0));
 }
 
 void loop()
@@ -255,8 +265,71 @@ void StopWatch()
 
 void GuessTime()
 {
-	lcd.setCursor(0, 0);
-	lcd.print("Gaet tid");
+	if (timeGuessed != -1)
+	{
+		lcd.setCursor(0, 0);
+		lcd.print("Dit gaet: ");
+		lcd.print(timeGuessed / 1000);
+		lcd.print(".");
+		lcd.print(timeGuessed / 100 - (timeGuessed / 1000) * 10);
+		lcd.setCursor(0, 1);
+		lcd.print("Rigtigt gaet: ");
+		lcd.print(correctGuess);
+
+		if (buttonClicked)
+		{
+			timeGuessed = -1;
+			lcd.clear();
+		}
+
+	} else
+	{
+		if (guessing == false)
+		{
+			lcd.setCursor(0, 0);
+			lcd.print("Gaet tid");
+			lcd.setCursor(0, 1);
+			lcd.print("Tryk for start");
+
+			if (buttonClicked)
+			{
+				correctGuess = random(1, 11);
+				guessing = true;
+				stateLocked = true;
+				lcd.clear();
+			}
+		} else
+		{
+			lcd.setCursor(0, 0);
+			lcd.print("Gaet tiden: ");
+			lcd.print(correctGuess);
+			if (guessTimeRunning)
+			{
+				lcd.setCursor(0, 1);
+				lcd.print("Tiden er i gang!");
+
+				if (buttonClicked)
+				{
+					timeGuessed = millis() - guessStartTime;
+					guessTimeRunning = false;
+					guessing = false;
+					stateLocked = false;
+					lcd.clear();
+				}
+			} else
+			{
+				lcd.setCursor(0, 1);
+				lcd.print("Tryk for start");
+
+				if (buttonClicked) {
+					guessTimeRunning = true;
+					guessStartTime = millis();
+					lcd.clear();
+				}
+			}
+		}
+	}
+
 }
 
 void EggTimer()

@@ -26,6 +26,13 @@ bool guessTimeRunning = false;
 long guessStartTime = 0;
 int correctGuess = 0;
 
+// Global vars for EggTimer
+bool eggInteractionStarted = false;
+bool eggTimerStartet = false;
+int eggState = 0;
+long eggStartTime = 0;
+long eggSelectedTime = 0;
+
 // Encoder setup
 Encoder myEnc(3, 2);
 int encoderValue = 0;
@@ -112,9 +119,9 @@ void DisplayTime(int row, long timeInMillis)
 void StateMachine()
 {
 	bool stateUpdated = false;
+	UpdateEncoderValue();
 	if (stateLocked == false)
 	{
-		UpdateEncoderValue();
 		currentState = abs((encoderValue / -4) % 4);
 		if (abs((prevEncoderValue / -4) % 4) != currentState)
 		{
@@ -236,7 +243,6 @@ void StopWatch()
 			lcd.print("Stopur");
 			lcd.setCursor(0, 1);
 			lcd.print("Tryk for start");
-			Serial.println(buttonClicked);
 			if (buttonClicked)
 			{
 				stopWatchStartet = true;
@@ -334,6 +340,77 @@ void GuessTime()
 
 void EggTimer()
 {
-	lcd.setCursor(0, 0);
-	lcd.print("Kog aeg");
+	if (eggInteractionStarted == false && eggTimerStartet == false)
+	{
+		lcd.setCursor(0, 0);
+		lcd.print("Kog aeg");
+		lcd.setCursor(0, 1);
+		lcd.print("Tryk for start");
+
+		if (buttonClicked)
+		{
+			eggInteractionStarted = true;
+			stateLocked = true;
+			lcd.clear();
+		}
+	} else if (eggInteractionStarted == true)
+	{
+		lcd.setCursor(0, 0);
+		lcd.print("Drej for valg");
+		lcd.setCursor(0, 1);
+		lcd.print("<-");
+		lcd.setCursor(14, 1);
+		lcd.print("->");
+
+		eggState = abs((encoderValue / -4) % 3);
+
+		lcd.setCursor(3, 1);
+		switch (eggState)
+		{
+			case 0:
+				lcd.print("Bloedkogt");
+				eggSelectedTime = 5;
+				break;
+			case 1:
+				lcd.print("Smilende "); 
+				eggSelectedTime = 7;
+				break;
+			case 2:
+				lcd.print("Haardkogt"); 
+				eggSelectedTime = 9;
+				break;
+			default:
+				break;
+		}
+
+		if (buttonClicked)
+		{
+			eggInteractionStarted = false;
+			eggTimerStartet = true;
+			eggStartTime = millis();
+			lcd.clear();
+		}
+	}
+	if (eggTimerStartet)
+	{
+		long eggTime = eggStartTime + eggSelectedTime * 60 * 1000 - millis();
+		DisplayTime(1, eggTime);
+
+		lcd.setCursor(0, 0);
+		if (eggTime <= 0)
+		{
+			lcd.print("Dit aeg er klar!");
+
+			if (buttonClicked)
+			{
+				eggTimerStartet = false;
+				stateLocked = false;
+				lcd.clear();
+			}
+
+		} else 
+		{
+			lcd.print("Tid tilbage:    ");
+		}
+	}
 }

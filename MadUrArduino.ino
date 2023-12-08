@@ -273,6 +273,9 @@ void Clock()
 	lcd.print(clock.month);
 	lcd.print("/");
 	lcd.print(clock.year+2000);
+
+	delay(500);
+	lcd.clear();
 }
 
 void StopWatch()

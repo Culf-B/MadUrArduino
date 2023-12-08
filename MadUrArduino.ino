@@ -14,6 +14,12 @@ bool buttonClicked = false;
 const int buttonCooldownMs = 100;
 long lastButtonClicktime = millis();
 
+// Global vars for alarm
+bool alarmOn = false;
+long alarmUpdateTime = 0;
+bool alarmState = false;
+const int alarmUpdateCooldown = 100; 
+
 // Global vars for StopWatch
 bool stopWatchStartet = false;
 long stopWatchStartTime;
@@ -38,11 +44,14 @@ Encoder myEnc(3, 2);
 int encoderValue = 0;
 int prevEncoderValue = 0;
 
+// Buzzer pin definition
+const int buzzerPin = 5;
+
 // LCD definition and variables
 rgb_lcd lcd;
-const int colorR = 255;
-const int colorG = 255;
-const int colorB = 255;
+int colorR = 255;
+int colorG = 255;
+int colorB = 255;
 
 // Clock definition
 DS1307 clock; //define a object of DS1307 class
@@ -53,6 +62,9 @@ void setup()
 
 	// Set button pin
 	pinMode(buttonPin, INPUT);
+
+	// Set buzzer pin
+	pinMode(buzzerPin, OUTPUT);
 
 	// Clock setup
 	clock.begin();
@@ -69,6 +81,9 @@ void loop()
 {
 	// Update buttonClicked
 	ButtonEvent();
+
+	// Update alarm
+	Alarm();
 
 	// Run StateMachine to run program functionality
 	StateMachine();
@@ -113,6 +128,41 @@ void DisplayTime(int row, long timeInMillis)
 	lcd.print(displaySeconds); // Seconds
 	lcd.print(".");
 	lcd.print(displayMillis); // Millis
+}
+
+void Alarm()
+{
+	if (alarmOn)
+	{
+		if (millis() >= alarmUpdateTime + alarmUpdateCooldown)
+		{
+			alarmUpdateTime = millis();
+			if (alarmState == true)
+			{
+				alarmState = false;
+				digitalWrite(buzzerPin, LOW);
+				lcd.setRGB(colorR, colorG, colorB);
+			} else 
+			{
+				alarmState = true;
+				digitalWrite(buzzerPin, HIGH);
+				lcd.setRGB(255, 0, 0);
+			}
+		}
+	} else if (alarmState)
+	{
+		// Reset the alarm when it is turned off
+		digitalWrite(buzzerPin, LOW);
+		lcd.setRGB(colorR, colorG, colorB);
+		alarmState = false;
+	}
+}
+
+void BeepSound()
+{
+	digitalWrite(buzzerPin, HIGH);
+	delay(20);
+	digitalWrite(buzzerPin, LOW);
 }
 
 // Program stucture functions
@@ -170,12 +220,15 @@ void ButtonEvent()
 	{
 		// Read button state from button pin.
 		// The value is inverted because the button pin is HIGH when the button is not pressed, and LOW when the button is pressed.
-		bool buttonState = !digitalRead(buttonPin);
+		bool buttonState = digitalRead(buttonPin);
+		Serial.println(buttonState);
 
 		if (buttonState == false && lastButtonState == true && millis() > lastButtonClicktime + buttonCooldownMs) // The timing is to add a cooldown to avoid ghost clicking
 		{
 			// There is a button event
 			buttonClicked = true;
+
+			BeepSound();
 
 			lastButtonClicktime = millis();
 		} else
@@ -393,19 +446,21 @@ void EggTimer()
 	}
 	if (eggTimerStartet)
 	{
-		long eggTime = eggStartTime + eggSelectedTime * 60 * 1000 - millis();
+		long eggTime = eggStartTime + eggSelectedTime - millis();
 		DisplayTime(1, eggTime);
 
 		lcd.setCursor(0, 0);
 		if (eggTime <= 0)
 		{
 			lcd.print("Dit aeg er klar!");
+			alarmOn = true;
 
 			if (buttonClicked)
 			{
 				eggTimerStartet = false;
 				stateLocked = false;
 				lcd.clear();
+				alarmOn = false;
 			}
 
 		} else 
